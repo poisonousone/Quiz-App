@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-//import 'package:quiz_app/question.dart';
+import 'package:quiz_app/question.dart';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
+void main() => runApp(new MaterialApp (
+  home: QuestionPage(),
+));
+/*class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -64,3 +63,4 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+*/
