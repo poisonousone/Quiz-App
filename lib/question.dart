@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:quiz_app/choice_card.dart';
 
 enum Current {first, second, third, forth}
 
@@ -21,6 +20,20 @@ class _QuizAppState extends State<QuizApp> {
         title: Text("Test Quiz"),
         centerTitle: true,
         backgroundColor: Colors.grey.shade900,
+        actions: <Widget>[
+          Padding(
+              padding: EdgeInsets.only(right: 20.0),
+              child: GestureDetector(
+                onTap: () {
+                  _showQuestionScreen();
+                },
+                child: Icon(
+                  Icons.menu,
+                  size: 26.0,
+                ),
+              )
+          ),
+        ]
       ),
       backgroundColor: Colors.grey.shade800,
       body: StreamBuilder(
@@ -32,9 +45,7 @@ class _QuizAppState extends State<QuizApp> {
                       Column(
                         children: [
                           //Here must have been an image
-                          Container(
-                            height: 150,
-                          ),
+                          SizedBox(height: 150,),
                           Container(
                               height: 150,
                               width: 500,
@@ -50,7 +61,7 @@ class _QuizAppState extends State<QuizApp> {
                       ),
                       Column(
                         children: [
-                          _choiceCard(snapshot, 1, 0),
+                          _choiceCard(snapshot, 3, 0),
                           Container(
                             color: Colors.grey.shade900,
                             child: ButtonBar(
@@ -80,23 +91,55 @@ class _QuizAppState extends State<QuizApp> {
 
   _choiceCard(AsyncSnapshot<dynamic> snapshot, int type, int questionNumber) {
     switch (type) {
-      case 0: {
+      case 0:
+        {
           return Column(
             children: [
               ListView.builder(
                   scrollDirection: Axis.vertical,
                   shrinkWrap: true,
-                  itemCount: snapshot.data.documents[questionNumber]['answers'].length,
+                  itemCount: snapshot.data.documents[questionNumber]['answers']
+                      .length,
                   itemBuilder: (context, int index) {
                     return Row(
                       children: <Widget>[
                         Checkbox(
-                            value: widget.checkboxValue[index],
-                            onChanged: (newValue) {
-                              setState(() {
-                                widget.checkboxValue[index] = newValue;
-                              });
-                            },
+                          value: widget.checkboxValue[index],
+                          onChanged: (newValue) {
+                            setState(() {
+                              widget.checkboxValue[index] = newValue;
+                            });
+                          },
+                        ),
+                        Text(snapshot.data
+                            .documents[questionNumber]['answers'][index])
+                      ],
+                    );
+                  }
+              ),
+            ],
+          );
+        }
+      case 1:
+        {
+          return Column(
+            children: [
+              ListView.builder(
+                  scrollDirection: Axis.vertical,
+                  shrinkWrap: true,
+                  itemCount: snapshot.data.documents[questionNumber]['answers']
+                      .length,
+                  itemBuilder: (context, int index) {
+                    return Row(
+                      children: <Widget>[
+                        Radio(
+                          value: Current.values[index],
+                          groupValue: widget._current,
+                          onChanged: (Current newValue) {
+                            setState(() {
+                              widget._current = newValue;
+                            });
+                          },
                         ),
                         Text(snapshot.data.documents[questionNumber]['answers'][index])
                       ],
@@ -106,25 +149,18 @@ class _QuizAppState extends State<QuizApp> {
             ],
           );
         }
-      case 1: {
-        return Column(
-          children: [
-            ListView.builder(
-                scrollDirection: Axis.vertical,
-                shrinkWrap: true,
-                itemCount: snapshot.data.documents[questionNumber]['answers'].length,
-                itemBuilder: (context, int index) {
-                  return Row(
-                    children: <Widget>[
-                      /*Checkbox(
-                        value: widget.checkedValue[index],
-                        onChanged: (newValue) {
-                          setState(() {
-                            widget.checkedValue[index] = newValue;
-                          });
-                        },
-                      ), */
-                      Radio(
+      case 2:
+        {
+          return Column(
+            children: [
+              ListView.builder(
+                  scrollDirection: Axis.vertical,
+                  shrinkWrap: true,
+                  itemCount: 2,
+                  itemBuilder: (context, int index) {
+                    return Row(
+                      children: <Widget>[
+                        Radio(
                           value: Current.values[index],
                           groupValue: widget._current,
                           onChanged: (Current newValue) {
@@ -132,15 +168,58 @@ class _QuizAppState extends State<QuizApp> {
                               widget._current = newValue;
                             });
                           },
-                      ),
-                      Text(snapshot.data.documents[questionNumber]['answers'][index])
-                    ],
-                  );
-                }
+                        ),
+                        Text(snapshot.data
+                            .documents[questionNumber]['answers'][index])
+                      ],
+                    );
+                  }
+              ),
+            ],
+          );
+        }
+      case 3:
+        {
+          return Container(
+            child: Column(
+                children: [
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: "Enter your answer",
+                      contentPadding: EdgeInsets.all(8),
+
+                    ),
+                  ),
+                  Container(
+                    height: 120,
+                  )
+                ]
             ),
-          ],
-        );
-      }
+            margin: EdgeInsets.all(10),
+          );
+        }
     }
   }
+
+  _showQuestionScreen() {
+    return NavigationRoute();
+  }
 }
+
+class NavigationRoute extends StatefulWidget {
+  @override
+  _NavigationRouteState createState() => _NavigationRouteState();
+}
+
+class _NavigationRouteState extends State<NavigationRoute> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Test Quiz"),
+        backgroundColor: Colors.grey.shade900,
+      )
+    );
+  }
+}
+
