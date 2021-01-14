@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum Current {first, second, third, forth}
+enum Current {first, second, third, fourth}
+String answer;
+List<bool> isRight = [null, null, null, null, null];
+
 
 class QuizApp extends StatefulWidget {
   List<bool> checkboxValue = [false, false, false, false];
   Current _current;
+  int questionNumber = 0;
   @override
   _QuizAppState createState() => _QuizAppState();
 }
 
 class _QuizAppState extends State<QuizApp> {
   var firestoreSnapshot = FirebaseFirestore.instance.collection("Quiz").snapshots();
+  final textController = TextEditingController();
+
+  _QuizAppState();
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +32,7 @@ class _QuizAppState extends State<QuizApp> {
               padding: EdgeInsets.only(right: 20.0),
               child: GestureDetector(
                 onTap: () {
-                  _showQuestionScreen();
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => NavigationRoute()));
                 },
                 child: Icon(
                   Icons.menu,
@@ -55,13 +62,13 @@ class _QuizAppState extends State<QuizApp> {
                                 border: Border.all(color: Colors.grey),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Text(snapshot.data.documents[0]['question'])
+                              child: Text(snapshot.data.documents[widget.questionNumber%5]['question'])
                           ),
                         ]
                       ),
                       Column(
                         children: [
-                          _choiceCard(snapshot, 3, 0),
+                          _choiceCard(snapshot, widget.questionNumber%5),
                           Container(
                             color: Colors.grey.shade900,
                             child: ButtonBar(
@@ -69,12 +76,63 @@ class _QuizAppState extends State<QuizApp> {
                               buttonMinWidth: 160,
                               children: [
                                 RaisedButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    switch (_checkAnswer(snapshot, widget.questionNumber%5)) {
+                                      case true: {
+                                      final snackbar = SnackBar(
+                                        content: Text("You're right!"),
+                                        backgroundColor: Colors.green,
+                                        duration: Duration(milliseconds: 800),
+                                      );
+                                      Scaffold.of(context).showSnackBar(snackbar);
+                                      setState(() {
+                                        isRight[widget.questionNumber%5] = true;
+                                        widget.questionNumber++;
+                                        widget._current = null;
+                                        for (int i = 0; i < 4; i++) {widget.checkboxValue[i] = false;};
+                                        clearTextField();
+                                      });
+                                      break;
+                                    }
+                                    case false: {
+                                      final snackbar = SnackBar(
+                                        content: Text("Wrong"),
+                                        backgroundColor: Colors.redAccent,
+                                        duration: Duration(milliseconds: 800),
+                                      );
+                                      Scaffold.of(context).showSnackBar(snackbar);
+                                      setState(() {
+                                        isRight[widget.questionNumber%5] = false;
+                                        widget.questionNumber++;
+                                        widget._current = null;
+                                        for (int i = 0; i < 4; i++) {widget.checkboxValue[i] = false;};
+                                        clearTextField();
+                                      });
+                                      break;
+                                    }
+                                    case null: {
+                                      final snackbar = SnackBar(
+                                        content: Text("Type something!"),
+                                        backgroundColor: Colors.redAccent,
+                                        duration: Duration(milliseconds: 800),
+                                      );
+                                      Scaffold.of(context).showSnackBar(snackbar);
+                                      break;
+                                    }
+                                    };
+                                  },
                                   color: Colors.green.shade900,
                                   child: Text("Check"),
                                 ),
                                 FlatButton(
-                                  onPressed: null,
+                                  onPressed: () {
+                                    setState(() {
+                                      widget.questionNumber++;
+                                      widget._current = null;
+                                      for (int i = 0; i < 4; i++) {widget.checkboxValue[i] = false;};
+                                      clearTextField();
+                                    });
+                                  },
                                   child: Text("Skip"),
                                 )
                               ],
@@ -84,12 +142,13 @@ class _QuizAppState extends State<QuizApp> {
                       )
                     ],
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            );
+           );
           }),
     );
   }
 
-  _choiceCard(AsyncSnapshot<dynamic> snapshot, int type, int questionNumber) {
+  _choiceCard(AsyncSnapshot<dynamic> snapshot, int questionNumber) {
+    int type = snapshot.data.documents[questionNumber]['type'];
     switch (type) {
       case 0:
         {
@@ -184,11 +243,16 @@ class _QuizAppState extends State<QuizApp> {
             child: Column(
                 children: [
                   TextField(
+                    controller: textController,
                     decoration: InputDecoration(
                       hintText: "Enter your answer",
                       contentPadding: EdgeInsets.all(8),
-
                     ),
+                    onChanged: (value) {
+                      setState(() {
+                        answer = value;
+                      });
+                    }
                   ),
                   Container(
                     height: 120,
@@ -201,10 +265,45 @@ class _QuizAppState extends State<QuizApp> {
     }
   }
 
-  _showQuestionScreen() {
-    return NavigationRoute();
+  clearTextField() {
+    textController.clear();
   }
-}
+
+ bool _checkAnswer(AsyncSnapshot<dynamic> snapshot, int questionNumber) {
+    var type = snapshot.data.documents[questionNumber]['type'];
+    switch(type) {
+      case 0:
+        {
+          return compareArrays(widget.checkboxValue, snapshot.data.documents[questionNumber]['rightAnswer']);
+        }
+      case 1: {
+        return (widget._current.toString().toLowerCase() == snapshot.data.documents[questionNumber]['rightAnswer']);
+      }
+      case 2: {
+        return (widget._current.toString().toLowerCase() == snapshot.data.documents[questionNumber]['rightAnswer']);
+      }
+      case 3:
+        {
+          if (!(answer == null)) return (answer.replaceAll(new RegExp(r'[^\w\s]+'), '')
+              .toLowerCase()
+              .replaceAll(new RegExp(r' '), '') ==
+              snapshot.data.documents[questionNumber]['rightAnswer'].replaceAll(
+                  new RegExp(r'[^\w\s]+'), '').toLowerCase().replaceAll(
+                  new RegExp(r' '), ''));
+          return  null;
+        }
+      default: return true;
+    }
+  }
+
+
+  bool compareArrays(List first, List second) {
+    for (int i = 0; i < first.length; i++) {
+      if (first[i] != second[i]) return false;
+    };
+    return true;
+  }
+  }
 
 class NavigationRoute extends StatefulWidget {
   @override
@@ -212,14 +311,60 @@ class NavigationRoute extends StatefulWidget {
 }
 
 class _NavigationRouteState extends State<NavigationRoute> {
+  var navSnapshot = FirebaseFirestore.instance.collection("Quiz").snapshots();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Test Quiz"),
+        title: Text("Question List"),
         backgroundColor: Colors.grey.shade900,
-      )
+      ),
+      body: StreamBuilder(
+        stream: navSnapshot,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return CircularProgressIndicator();
+          return ListView.builder(
+            scrollDirection: Axis.vertical,
+            shrinkWrap: true,
+            itemCount: snapshot.data.documents.length,
+            itemBuilder: (context, int index) {
+              return Container(
+                         child: Row(
+                           children: [
+                             Text(snapshot.data.documents[index]['quote']),
+                             Icon(_iconButton(isRight, index))
+                           ],
+                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                         ),
+                          padding: EdgeInsets.all(12),
+                          margin: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                          color: Colors.grey.shade700,
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(5),
+                          ),
+                  );
+            },
+          );
+        },
+        ),
+        backgroundColor: Colors.grey.shade800,
     );
+  }
+
+  _iconButton(List<bool> answers, int index) {
+    switch(answers[index]) {
+      case null: {
+        return Icons.check_box_outline_blank_outlined;
+      }
+      case true: {
+        return Icons.check;
+      }
+      case false: {
+        return Icons.clear_rounded;
+      }
+      default: return Icons.check_box_outline_blank_outlined;
+    }
   }
 }
 
